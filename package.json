@@ -1,0 +1,20 @@
+{
+  "name": "bits-and-bobs",
+  "version": "1.0.0",
+  "description": "I dunno, man, I wanna use more bits and bobs from Raku",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RayMPerry/bits-and-bobs.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RayMPerry/bits-and-bobs/issues"
+  },
+  "homepage": "https://github.com/RayMPerry/bits-and-bobs#readme"
+}
