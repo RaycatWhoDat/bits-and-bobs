@@ -43,14 +43,12 @@ class Range {
 
   getValue() {
     const newRange = [];
-    if (this.end == this.start) return newRange;
-
-    const direction = Math.sign(this.end - this.start);
-    
-    for (let index = this.start; direction == 1 ? index < this.end : index > this.end; index += direction) {
-      newRange.push(index);
+    if (this.end !== this.start) {
+      const direction = Math.sign(this.end - this.start);
+      for (let index = this.start; direction == 1 ? index < this.end : index > this.end; index += direction) {
+        newRange.push(index);
+      }
     }
-
     return newRange;
   }
 }
