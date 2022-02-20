@@ -4,11 +4,12 @@
 // any number of sources in the Container.
 
 // Exclusive range.
-class Range {
+class NumberRange {
   constructor(start, end) {
     this.start = start;
     this.end = end;
-
+    this.direction = Math.sign(this.end - this.start);
+  
     return new Proxy(this, {
       has(target, prop) {
         return prop >= target.start && prop <= target.end;
@@ -22,8 +23,8 @@ class Range {
           const parsedProp = parseInt(prop, 10);
           if (!Number.isNaN(parsedProp)) {
             const result = parsedProp + target.start;
-            if (result >= target.end || result < target.start) {
-              throw new Error('Index out of range.');
+            if (result >= target.direction * target.end || result < target.direction * target.start) {
+              return null;
             }
             return result;
           } else {
@@ -31,7 +32,6 @@ class Range {
           }
         } catch (error) {
           console.error(error);
-          return null;
         }
       }
     });
@@ -41,35 +41,35 @@ class Range {
     return [this.start, this.end];
   }
 
-  getValue() {
-    const newRange = [];
+  *[Symbol.iterator]() {
     if (this.end !== this.start) {
-      const direction = Math.sign(this.end - this.start);
-      for (let index = this.start; direction == 1 ? index < this.end : index > this.end; index += direction) {
-        newRange.push(index);
+      for (let index = this.start; this.direction == 1 ? index < this.end : index > this.end; index += this.direction) {
+        yield index;
       }
+    } else {
+      yield null;
     }
-    return newRange;
   }
+  
+  getValue() {
+    return [...this];
+  }
+
 }
 
 class Container {
-  constructor(...sources) {
-    this.sources = sources ?? [];
-    this.value = sources;
+  constructor() {
+    this.sources = [];
+    this.value = null;
   }
 
-  getValue() {
-    return this.value;
-  }
-
-  addSource(newSource) {
-    this.sources.push(Array.isArray(newSource) ? newSource : [newSource]);
+  addSources(...sources) {
+    this.sources.push(sources);
     return this;
   }
   
-  addRange(start, end) {
-    this.sources.push(new Range(start, end));
+  addNumberRange(start, end) {
+    this.sources.push(new NumberRange(start, end));
     return this;
   }
 
@@ -101,10 +101,15 @@ class Container {
   }
 }
 
-const testCase1 = new Range(1, 10);
+const testCase1 = new NumberRange(1, 10);
 console.log(testCase1.getBounds());
+console.log([...testCase1]);
+console.assert(5 in testCase1, "5 isn't between 1 and 10?");
+console.assert(-1 in testCase1 === false, "-1 is between 1 and 10?");
+console.assert(-1 in new NumberRange(-1, 10), "-1 isn't between -1 and 10?");
+// testCase1.forEach(console.log);
 
-const testCase2 = new Container().addRange(1, 10).addRange(11, 20).addSource(764132);
+const testCase2 = new Container().addNumberRange(-10, -1).addNumberRange(1, 10).addNumberRange(11, 20).addNumberRange(21, 30);
+console.log(testCase2.sources);
 
-console.log(testCase2.getValue());
-console.log(testCase2.zip().getValue());
+console.log(testCase2.zip().value);
