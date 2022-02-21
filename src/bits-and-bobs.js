@@ -12,11 +12,15 @@ class RangeStop {
   }
 
   get value() {
-    return this._source?.length ? this._source[this._value] : this._value;
+    return this.getFromSource(this._value) ?? this._value;
   }
 
   getFromSource(index) {
-    return this._source[index] ?? null;
+    if (this._source && (Array.isArray(this._source) || typeof this._source === 'object')) {
+      return this._source[index];
+    } 
+
+    return null;
   }
 }
 
@@ -173,7 +177,7 @@ const testString2 = 'This is another test'.split(/\s/g);
 const testCase4 = new Container().addSources(testString1, testString2).zip().value;
 console.log(testCase4);
 
-const testCase5 = new Range().addStep(1).addStep(10).addStop(-17).addStep(21).addStep(30);
+const testCase5 = new Range().addStep(1).addStep(10).addStop(-17).addStop(2, [0, 1, 34231]).addStop(2, [...new NumberRange(1, 10)]).addStep(21).addStep(30);
 console.log(testCase5);
 console.log(testCase5.getBounds());
 console.log(testCase5.getValue());
