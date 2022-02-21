@@ -7,7 +7,7 @@ const isIterable = item => typeof item[Symbol.iterator] === 'function' || typeof
 
 class RangeStop {
   constructor(value, source = null) {
-    this._source = source ?? [];
+    this._source = source ?? null;
     this._value = value;
   }
 
@@ -26,6 +26,7 @@ class RangeStep extends RangeStop {
   }
 }
 
+// TODO: Expand the range interface.
 class Range {
   constructor(...steps) {
     this.steps = [];
@@ -33,14 +34,24 @@ class Range {
     this.rangeDirection = 1; // Forward by default
 
     for (let index = 0; index < steps.length; index++) {
-      this.steps.push(steps[index] instanceof RangeStop ? steps[index] : new RangeStop(steps[index]));
+      this.steps.push(steps[index] instanceof RangeStop ? steps[index] : new RangeStop(0, steps[index]));
     }
   }
 
+  addStep(value, source = null) {
+    this.steps.push(new RangeStep(value, source));
+    return this;
+  }
+
+  addStop(value, source = null) {
+    this.steps.push(new RangeStop(value, source));
+    return this;
+  }
+  
   *[Symbol.iterator]() {
     for (let rangeIndex = this.position; rangeIndex < this.steps.length; rangeIndex += this.rangeDirection) {
       const currentStep = this.steps[rangeIndex];
-      const nextStep = this.steps[rangeIndex + 1] ?? null;
+      const nextStep = this.steps[rangeIndex + this.rangeDirection] ?? null;
 
       const isCurrentStepExistent = currentStep instanceof RangeStop;
       const isNextStepExistent = nextStep instanceof RangeStop;
@@ -75,39 +86,10 @@ class Range {
   }
 }
 
-// Inclusive range.
 class NumberRange extends Range {
   constructor(start, end) {
     super(new RangeStep(start), new RangeStep(end));
-
     this.rangeDirection = Math.sign(end - start);
-    
-    // Doesn't work anymore.
-    // return new Proxy(this, {
-    //   has(target, prop) {
-    //     return prop >= target.start.value && prop <= target.end.value;
-    //   },
-    //   get(target, prop) {
-    //     try {
-    //       if (prop === 'length') return target.end.value - target.start.value;
-
-    //       if (prop in target) return target[prop];
-
-    //       const parsedProp = parseInt(prop, 10);
-    //       if (!Number.isNaN(parsedProp)) {
-    //         const result = parsedProp + target.start.value;
-    //         if (result >= target.direction * target.end.value || result < target.direction * target.start.value) {
-    //           return null;
-    //         }
-    //         return result;
-    //       } else {
-    //         throw new Error(`No case for prop named ${prop}. Throwing.`);
-    //       }
-    //     } catch (error) {
-    //       console.error(error);
-    //     }
-    //   }
-    // });
   }
 }
 
@@ -178,10 +160,6 @@ class Container {
 const testCase1 = new NumberRange(1, 10);
 console.log(testCase1.getBounds());
 console.log([...testCase1]);
-// console.assert(5 in testCase1, '5 isn't between 1 and 10?');
-// console.assert(-1 in testCase1 === false, '-1 is between 1 and 10?');
-// console.assert(-1 in new NumberRange(-1, 10), '-1 isn't between -1 and 10?');
-// testCase1.forEach(console.log);
 
 const testCase2 = new Container().addNumberRange(-10, -1).addNumberRange(1, 10).addNumberRange(11, 20).addNumberRange(21, 30).addSources(3612, 4323, '8742', 'test');
 console.log(testCase2.zip().value);
@@ -190,8 +168,12 @@ const testCase3 = new NumberRange(-10, -1);
 console.log([...testCase3]);
 console.log(testCase3.getBounds());
 
-
 const testString1 = 'This is a test'.split(/\s/g);
 const testString2 = 'This is another test'.split(/\s/g);
 const testCase4 = new Container().addSources(testString1, testString2).zip().value;
 console.log(testCase4);
+
+const testCase5 = new Range().addStep(1).addStep(10).addStop(-17).addStep(21).addStep(30);
+console.log(testCase5);
+console.log(testCase5.getBounds());
+console.log(testCase5.getValue());
