@@ -21,10 +21,11 @@ class RangeStop {
   }
 
   getFromSource(index) {
-    if (this._source && (Array.isArray(this._source) || typeof this._source === 'object')) {
-      return this._source[index];
-    } 
-
+    if (this._source) {
+      if (this._source instanceof Range || Array.isArray(this._source) || typeof this._source === 'object') {
+        return this._source[index];
+      } 
+    }
     return null;
   }
 }
@@ -37,14 +38,26 @@ class RangeStep extends RangeStop {
 
 // TODO: Expand the range interface.
 class Range {
-  constructor(...steps) {
+  constructor(options) {
+    const { direction = RangeDirection.FORWARD, steps = [] } = options ?? {};
+    
     this.steps = [];
-    this.position = 0;
-    this.rangeDirection = RangeDirection.FORWARD;
+    this.direction = this.direction || RangeDirection.FORWARD;
+    this.isForwardRange = this.direction === RangeDirection.FORWARD;
 
     for (let index = 0; index < steps.length; index++) {
       this.steps.push(steps[index] instanceof RangeStop ? steps[index] : new RangeStop(0, steps[index]));
     }
+
+    this.position = this.isForwardRange ? 0 : this.steps.length - 1;
+
+    return new Proxy(this, {
+      get(target, prop) {
+        if (prop in target || typeof prop !== 'string' || Number.isNaN(Number(prop))) return target[prop];
+        const steps = [target.steps[0], new RangeStep(Number(prop) + target.direction, target.steps[0]._source)];
+        return [...new Range({ direction: target.direction, steps })].pop();
+      }
+    });
   }
 
   addStep(value, source = null) {
@@ -58,18 +71,23 @@ class Range {
   }
   
   *[Symbol.iterator]() {
-    for (let rangeIndex = this.position; rangeIndex < this.steps.length; rangeIndex += this.rangeDirection) {
-      const currentStep = this.steps[rangeIndex];
-      const nextStep = this.steps[rangeIndex + this.rangeDirection] ?? null;
+    for (; this.isForwardRange ? this.position < this.steps.length : this.position >= 0; this.position += this.direction) {
+      const currentStep = this.steps[this.position];
+      const nextStep = this.steps[this.position + this.direction] ?? null;
 
       const isCurrentStepExistent = currentStep instanceof RangeStop;
       const isNextStepExistent = nextStep instanceof RangeStop;
       const isRangeDerivable = currentStep instanceof RangeStep && nextStep instanceof RangeStep;
       const isCurrentStepSourceExistent = Boolean(currentStep?.source);
-      const isCurrentNextSourceExistent = Boolean(nextStep?.source);
+      const isNextStepSourceExistent = Boolean(nextStep?.source);
       const isSourceDistinct = currentStep?.source !== nextStep?.source;
-      const isValueDistinct = currentStep?.value !== nextStep?.value
-
+      const isValueDistinct = currentStep?.value !== nextStep?.value;
+      
+      if (!isCurrentStepExistent && !isNextStepExistent) {
+        yield null;
+        break;
+      }
+      
       // Determine approach
       if (!isRangeDerivable && isCurrentStepExistent) {
         yield currentStep.value;
@@ -81,8 +99,6 @@ class Range {
           yield currentStep?.source ? currentStep.getFromSource(index) : index;
         }
       }
-
-      this.position += this.rangeDirection;
     }
   }
   
@@ -97,8 +113,9 @@ class Range {
 
 class NumberRange extends Range {
   constructor(start, end) {
-    super(new RangeStep(start), new RangeStep(end));
-    this.rangeDirection = Math.sign(end - start);
+    const direction = Math.sign(end - start);
+    const steps = [new RangeStep(start), new RangeStep(end)];
+    super({ direction, steps });
   }
 }
 
@@ -120,10 +137,6 @@ class Container {
 
   zip() {
     // Zips longest. Pushes `null` if item doesn't exist.
-
-    this.sources.forEach((source, index, arr) => {
-    });
-    
     let unfinishedSourceIndices = [];
     let largestSourceLength = 0;
 
@@ -166,43 +179,58 @@ class Container {
   }
 }
 
+console.log('Test Case 1');
+console.log('===========');
 const testCase1 = new NumberRange(1, 10);
-
 console.log(testCase1.getBounds());
 console.log([...testCase1]);
 
+console.log('Test Case 2');
+console.log('===========');
 const testCase2 = new Container()
       .addNumberRange(-10, -1)
       .addNumberRange(1, 10)
       .addNumberRange(11, 20)
       .addNumberRange(21, 30)
-      .addSources(3612, 4323, '8742', 'test');
-
+      .addSources(3612, 4323, '874342', 'test');
 console.log(testCase2.zip().value);
 
+console.log('Test Case 3');
+console.log('===========');
 const testCase3 = new NumberRange(-10, -1);
-
 console.log([...testCase3]);
 console.log(testCase3.getBounds());
 
+console.log('Test Case 4');
+console.log('===========');
 const testString1 = 'This is a test'.split(/\s/g);
 const testString2 = 'This is another test'.split(/\s/g);
 const testCase4 = new Container()
       .addSources(testString1, testString2)
       .zip()
       .value;
-
 console.log(testCase4);
 
+console.log('Test Case 5');
+console.log('===========');
 const testCase5 = new Range()
       .addStep(1)
       .addStep(10)
       .addStop(-17)
       .addStop(2, [0, 1, 34231])
-      .addStop(2, [...new NumberRange(1, 10)])
+      .addStop(2, new NumberRange(1, 10))
       .addStep(21)
       .addStep(30);
-
 console.log(testCase5);
 console.log(testCase5.getBounds());
 console.log(testCase5.getValue());
+
+console.log('Test Case 6');
+console.log('===========');
+const testCase6 = new Container()
+      .addNumberRange(1, 100)
+      .addNumberRange(100, 1)
+      .zip();
+console.log(testCase6);
+
+      
