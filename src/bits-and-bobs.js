@@ -3,6 +3,11 @@
 // Given a Container of some description, you should be able to zip
 // any number of sources in the Container.
 
+const RangeDirection = {
+  FORWARD: 1,
+  BACKWARDS: -1
+}
+
 const isIterable = item => typeof item[Symbol.iterator] === 'function' || typeof item['next'] === 'function';
 
 class RangeStop {
@@ -35,7 +40,7 @@ class Range {
   constructor(...steps) {
     this.steps = [];
     this.position = 0;
-    this.rangeDirection = 1; // Forward by default
+    this.rangeDirection = RangeDirection.FORWARD;
 
     for (let index = 0; index < steps.length; index++) {
       this.steps.push(steps[index] instanceof RangeStop ? steps[index] : new RangeStop(0, steps[index]));
@@ -162,22 +167,42 @@ class Container {
 }
 
 const testCase1 = new NumberRange(1, 10);
+
 console.log(testCase1.getBounds());
 console.log([...testCase1]);
 
-const testCase2 = new Container().addNumberRange(-10, -1).addNumberRange(1, 10).addNumberRange(11, 20).addNumberRange(21, 30).addSources(3612, 4323, '8742', 'test');
+const testCase2 = new Container()
+      .addNumberRange(-10, -1)
+      .addNumberRange(1, 10)
+      .addNumberRange(11, 20)
+      .addNumberRange(21, 30)
+      .addSources(3612, 4323, '8742', 'test');
+
 console.log(testCase2.zip().value);
 
 const testCase3 = new NumberRange(-10, -1);
+
 console.log([...testCase3]);
 console.log(testCase3.getBounds());
 
 const testString1 = 'This is a test'.split(/\s/g);
 const testString2 = 'This is another test'.split(/\s/g);
-const testCase4 = new Container().addSources(testString1, testString2).zip().value;
+const testCase4 = new Container()
+      .addSources(testString1, testString2)
+      .zip()
+      .value;
+
 console.log(testCase4);
 
-const testCase5 = new Range().addStep(1).addStep(10).addStop(-17).addStop(2, [0, 1, 34231]).addStop(2, [...new NumberRange(1, 10)]).addStep(21).addStep(30);
+const testCase5 = new Range()
+      .addStep(1)
+      .addStep(10)
+      .addStop(-17)
+      .addStop(2, [0, 1, 34231])
+      .addStop(2, [...new NumberRange(1, 10)])
+      .addStep(21)
+      .addStep(30);
+
 console.log(testCase5);
 console.log(testCase5.getBounds());
 console.log(testCase5.getValue());
