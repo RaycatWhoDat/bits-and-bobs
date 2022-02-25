@@ -232,5 +232,3 @@ const testCase6 = new Container()
       .addNumberRange(100, 1)
       .zip();
 console.log(testCase6);
-
-      
