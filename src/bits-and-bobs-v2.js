@@ -46,6 +46,18 @@ class Range {
     
     return returnValue;
   }
+
+  get isForwardRange() {
+    return 'popFront' in this;
+  }
+
+  get isBackwardsRange() {
+    return 'popBack' in this;
+  }
+
+  get isBidirectionalRange() {
+    return this.isForwardRange && this.isBackwardsRange;
+  }
 }
 
 class ForwardRange extends Range {
@@ -273,6 +285,11 @@ console.log(testRange2.front());
 testRange2 = testRange2.retro();
 testRange2.popFront();
 console.log(testRange2.front());
+console.table({
+  isForwardRange: testRange2.isForwardRange,
+  isBackwardsRange: testRange2.isBackwardsRange,
+  isBidirectionalRange: testRange2.isBidirectionalRange
+});
 
 console.log('Test 3 ====================');
 const testRange3 = new Chain(
@@ -320,7 +337,7 @@ each(testIota, console.log);
 console.log(take(iota(0, 5), 2));
 
 console.log('Test 8 ====================');
-const testTake = take(cycle(iota(3, 5)), 17);
+const testTake = take(cycle(iota(3, 6)), 17);
 
 each(testTake, console.log);
 
