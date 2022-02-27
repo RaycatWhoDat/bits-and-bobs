@@ -39,13 +39,6 @@ class ForwardRange extends Range {
     if (this.empty()) throw new Error('Cannot advance an exhausted range.');
     this.begin++;
   }
-
-  forEach(func) {
-    if (typeof func !== 'function') throw new Error('Foreach parameter is not a function.');
-    for (; !this.empty(); this.popFront()) {
-      func(this.front());
-    }
-  }
 }
 
 class BackwardsRange extends Range {
@@ -196,6 +189,15 @@ class Stride extends ForwardRange {
   }
 }
 
+
+const forEach = (range, func) => {
+  if (!(range instanceof Range)) throw new Error('Foreach takes a range as the first parameter.');
+  if (typeof func !== 'function') throw new Error('Foreach takes a function as the second parameter.');
+  for (; !range.empty(); range.popFront()) {
+    func(range.front());
+  }
+}
+
 console.log('Test 1 ====================');
 const testSource = [1, '2', [3], {four: 4}, new Chain(), new RangeItem(6), 7, 8];
 const testRange1 = new ForwardRange(testSource);
@@ -219,7 +221,7 @@ const testRange3 = new Chain(
   new ForwardRange(testSource)
 );
 
-testRange3.forEach(item => {
+forEach(testRange3, item => {
   console.log(item);
 });
 
@@ -229,7 +231,7 @@ const testRange4 = new Zip(
   new Retro(testSource)
 );
 
-testRange4.forEach(([item1, item2]) => {
+forEach(testRange4, ([item1, item2]) => {
   console.log(item1, item2);
 });
   
@@ -242,14 +244,14 @@ const testRange5 = new Stride(
   ), 2
 );
 
-testRange5.forEach(item => {
+forEach(testRange5, item => {
   console.log(item, testRange5.begin);
 });
 
 console.log('Test 6 ====================');
 const testRange6 = new Stride(testSource, 2);
 
-testRange6.forEach(item => {
+forEach(testRange6, item => {
   console.log(item, testRange5.begin);
 });
 
