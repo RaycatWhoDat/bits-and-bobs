@@ -8,18 +8,6 @@ class RangeItem {
 
 class Range {
   constructor(source, begin = 0, end = 0) {
-    // this.source = new Proxy(source, {
-    //   get(target, prop) {
-    //     if (prop in target) {
-    //       let returnValue = target[prop];
-    //       if (target.propertyIsEnumerable(prop) && !(target[prop] instanceof RangeItem) && !(target[prop] instanceof Range)) {
-    //         returnValue = new RangeItem(target[prop]);
-    //       }
-    //       return returnValue;
-    //     }
-    //   }
-    // });
-
     this.source = source;
     this.begin = begin;
     this.end = end;
@@ -181,6 +169,12 @@ class Stride extends ForwardRange {
 
   popFront() {
     this.begin += this.stride;
+
+    if (this.source instanceof Range) {
+      for (let iterations = 0; iterations < this.stride; iterations++) {
+        this.source.popFront();
+      }
+    }
   }
 
   front() {
@@ -195,15 +189,21 @@ class Stride extends ForwardRange {
 
     return returnValue;
   }
+
+  empty() {
+    if (this.source instanceof Range) return this.source.empty();
+    return super.empty();
+  }
 }
 
+console.log('Test 1 ====================');
 const testSource = [1, '2', [3], {four: 4}, new Chain(), new RangeItem(6), 7, 8];
 const testRange1 = new ForwardRange(testSource);
 console.log(testRange1.front());
 testRange1.popFront();
 console.log(testRange1.front());
-console.log('====================');
 
+console.log('Test 2 ====================');
 let testRange2 = new Retro(testSource);
 console.log(testRange2.front());
 testRange2.popFront();
@@ -211,8 +211,8 @@ console.log(testRange2.front());
 testRange2 = testRange2.retro();
 testRange2.popFront();
 console.log(testRange2.front());
-console.log('====================');
 
+console.log('Test 3 ====================');
 const testRange3 = new Chain(
   new ForwardRange(testSource, 5),
   new ForwardRange(testSource, 2, 4),
@@ -223,8 +223,7 @@ testRange3.forEach(item => {
   console.log(item);
 });
 
-console.log('====================');
-
+console.log('Test 4 ====================');
 const testRange4 = new Zip(
   new ForwardRange(testSource),
   new Retro(testSource)
@@ -234,21 +233,23 @@ testRange4.forEach(([item1, item2]) => {
   console.log(item1, item2);
 });
   
-console.log('====================');
-
-// const testRange5 = new Stride(
-//   new Chain(
-//     new ForwardRange(testSource, 5),
-//     new ForwardRange(testSource, 2, 4),
-//     new ForwardRange(testSource)
-//   ), 2
-// );
-
-const testRange5 = new Stride(testSource, 2);
-
-console.log(testRange5);
+console.log('Test 5 ====================');
+const testRange5 = new Stride(
+  new Chain(
+    new ForwardRange(testSource, 5),
+    new ForwardRange(testSource, 2, 4),
+    new ForwardRange(testSource)
+  ), 2
+);
 
 testRange5.forEach(item => {
   console.log(item, testRange5.begin);
 });
-  
+
+console.log('Test 6 ====================');
+const testRange6 = new Stride(testSource, 2);
+
+testRange6.forEach(item => {
+  console.log(item, testRange5.begin);
+});
+
