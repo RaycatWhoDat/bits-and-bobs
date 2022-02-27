@@ -12,7 +12,7 @@ class Range {
     this.begin = begin;
     this.end = end;
     if (begin >= end) {
-      if (isIterable(source)) this.end = source.length - 1;
+      if (isIterable(source)) this.end = source.length ? source.length - 1 : 0;
       if (source instanceof Range) this.end = source.end;
     }
   }
@@ -22,16 +22,34 @@ class Range {
   }
 
   front() {
-    return this.source[this.begin];
+    let returnValue = null;
+    if (this.source instanceof Range) {
+      returnValue = this.source.front();
+    }
+    
+    if (isIterable(this.source)) {
+      returnValue = this.source[this.begin];
+    }
+    
+    return returnValue;
   }
 
   back() {
-    return this.source[this.end];
+    let returnValue = null;
+    if (this.source instanceof Range) {
+      returnValue = this.source.back();
+    }
+    
+    if (isIterable(this.source)) {
+      returnValue = this.source[this.end];
+    }
+    
+    return returnValue;
   }
 }
 
 class ForwardRange extends Range {
-  constructor(source, begin = 0, end = 0) {
+  constructor(source, begin, end) {
     super(source, begin, end);
   }
 
@@ -42,7 +60,7 @@ class ForwardRange extends Range {
 }
 
 class BackwardsRange extends Range {
-  constructor(source, begin = 0, end = 0) {
+  constructor(source, begin, end) {
     super(source, begin, end);
   }
 
@@ -53,7 +71,7 @@ class BackwardsRange extends Range {
 }
 
 class BidirectionalRange extends Range {
-  constructor(source, begin = 0, end = 0) {
+  constructor(source, begin, end) {
     super(source, begin, end);
   }
 
@@ -69,7 +87,7 @@ class BidirectionalRange extends Range {
 }
 
 class Retro extends BidirectionalRange {
-  constructor(source, begin = 0, end = 0) {
+  constructor(source, begin, end) {
     super(source, begin, end);
     this.originalRange = new BidirectionalRange(source, begin, end);
   }
@@ -153,34 +171,20 @@ class Zip extends ForwardRange {
   }
 }
 
-// DEV: Can't handle Chains yet.
 class Stride extends ForwardRange {
-  constructor(source, stride = 1, begin = 0, end = 0) {
+  constructor(source, begin, end, step) {
     super(source, begin, end);
-    this.stride = stride ?? 1;
+    this.step = step ?? 1;
   }
 
   popFront() {
-    this.begin += this.stride;
+    this.begin += this.step;
 
     if (this.source instanceof Range) {
-      for (let iterations = 0; iterations < this.stride; iterations++) {
+      for (let iterations = 0; iterations < this.step; iterations++) {
         this.source.popFront();
       }
     }
-  }
-
-  front() {
-    let returnValue = null;
-    if (this.source instanceof Range) {
-      returnValue = this.source.front();
-    }
-
-    if (isIterable(this.source)) {
-      returnValue = this.source[this.begin];
-    }
-
-    return returnValue;
   }
 
   empty() {
@@ -189,14 +193,70 @@ class Stride extends ForwardRange {
   }
 }
 
+class Iota extends Stride {
+  constructor(begin, end = Infinity, step) {
+    super([begin], 0, end - begin, step);
+    this.step = step ?? 1;
+  }
 
-const forEach = (range, func) => {
-  if (!(range instanceof Range)) throw new Error('Foreach takes a range as the first parameter.');
-  if (typeof func !== 'function') throw new Error('Foreach takes a function as the second parameter.');
+  popFront() {
+    if (this.empty()) throw new Error('Cannot advance an exhausted range.');
+    const currentValue = this.front();
+    this.begin++;
+    if (this.source[this.begin] === undefined) this.source[this.begin] = currentValue + this.step;
+  }
+
+  empty() {
+    return this.begin >= this.end;
+  }
+}
+
+class Cycle extends ForwardRange {
+  constructor(source) {
+    if (!(source instanceof Range)) throw new Error('Cycle only works on ranges.');
+    super(source, source.begin, source.end);
+  }
+
+  popFront() {
+    this.begin++;
+    if (this.begin >= this.end) {
+      this.begin = 0;
+      this.source.begin = 0;
+    } else {
+      this.source.popFront();
+    }
+  }
+}
+
+class Take extends ForwardRange {
+  constructor(source, limit) {
+    super(source, 0, limit);
+  }
+  
+  popFront() {
+    this.begin++;
+    if (this.source instanceof Range) {
+      this.source.popFront();
+    }
+  }
+
+  empty() {
+    return this.begin >= this.end;
+  }
+}
+
+const each = (range, func) => {
+  if (!(range instanceof Range)) throw new Error('Each takes a range as the first parameter.');
+  if (typeof func !== 'function') throw new Error('Each takes a function as the second parameter.');
   for (; !range.empty(); range.popFront()) {
     func(range.front());
   }
 }
+
+const zip = (...sources) => new Zip(...sources);
+const iota = (begin, end, step) => new Iota(begin, end, step);
+const cycle = source => new Cycle(source);
+const take = (range, number) => new Take(range, number);
 
 console.log('Test 1 ====================');
 const testSource = [1, '2', [3], {four: 4}, new Chain(), new RangeItem(6), 7, 8];
@@ -221,7 +281,7 @@ const testRange3 = new Chain(
   new ForwardRange(testSource)
 );
 
-forEach(testRange3, item => {
+each(testRange3, item => {
   console.log(item);
 });
 
@@ -231,7 +291,7 @@ const testRange4 = new Zip(
   new Retro(testSource)
 );
 
-forEach(testRange4, ([item1, item2]) => {
+each(testRange4, ([item1, item2]) => {
   console.log(item1, item2);
 });
   
@@ -241,17 +301,26 @@ const testRange5 = new Stride(
     new ForwardRange(testSource, 5),
     new ForwardRange(testSource, 2, 4),
     new ForwardRange(testSource)
-  ), 2
+  ), 0, 0, 2
 );
 
-forEach(testRange5, item => {
+each(testRange5, item => {
   console.log(item, testRange5.begin);
 });
 
 console.log('Test 6 ====================');
-const testRange6 = new Stride(testSource, 2);
+const testRange6 = new Stride(testSource, 0, 0, 2);
 
-forEach(testRange6, item => {
-  console.log(item, testRange5.begin);
-});
+each(testRange6, console.log);
+
+console.log('Test 7 ====================');
+const testIota = iota(0, 5);
+console.log(testIota);
+each(testIota, console.log);
+console.log(take(iota(0, 5), 2));
+
+console.log('Test 8 ====================');
+const testTake = take(cycle(iota(3, 5)), 17);
+
+each(testTake, console.log);
 
